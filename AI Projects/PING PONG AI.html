@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ping Pong AI Game</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #000;
+      border: 2px solid #fff;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="pong" width="800" height="500"></canvas>
+
+<script>
+  const canvas = document.getElementById("pong");
+  const ctx = canvas.getContext("2d");
+
+  class Paddle {
+    constructor(x, y, width, height, color) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.color = color;
+      this.score = 0;
+      this.dy = 5; 
+    }
+
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+
+    reset() {
+      this.y = canvas.height / 2 - this.height / 2;
+    }
+  }
+  class Ball {
+    constructor(x, y, radius, color) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+      this.color = color;
+      this.speed = 5;
+      this.dx = 5;
+      this.dy = 5;
+    }
+
+    draw() {
+      ctx.beginPath();
+      ctx.fillStyle = this.color;
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    reset() {
+      this.x = canvas.width / 2;
+      this.y = canvas.height / 2;
+      this.speed = 5;
+      this.dx = -this.dx;
+      this.dy = 5 * (Math.random() * 2 - 1); 
+    }
+  }
+
+  const player = new Paddle(10, canvas.height / 2 - 50, 10, 100, "#fff");
+  const ai = new Paddle(canvas.width - 20, canvas.height / 2 - 50, 10, 100, "#fff");
+  const ball = new Ball(canvas.width / 2, canvas.height / 2, 10, "#ff0000");
+
+  // Draw net
+  function drawNet() {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(canvas.width / 2 - 1, 0, 2, canvas.height);
+  }
+
+  function drawScore(x, y, score) {
+    ctx.fillStyle = "#fff";
+    ctx.font = "35px Arial";
+    ctx.fillText(score, x, y);
+  }
+
+  function collision(b, p) {
+    p.top = p.y;
+    p.bottom = p.y + p.height;
+    p.left = p.x;
+    p.right = p.x + p.width;
+
+    b.top = b.y - b.radius;
+    b.bottom = b.y + b.radius;
+    b.left = b.x - b.radius;
+    b.right = b.x + b.radius;
+
+    return (
+      b.right > p.left &&
+      b.bottom > p.top &&
+      b.left < p.right &&
+      b.top < p.bottom
+    );
+  }
+
+  function resetBall() {
+    if (ball.x - ball.radius < 0) {
+      ai.score++;
+      ball.reset();
+    } else if (ball.x + ball.radius > canvas.width) {
+      player.score++;
+      ball.reset();
+    }
+  }
+
+  function updateAI() {
+    if (ball.y < ai.y + ai.height / 2) {
+      ai.y -= ai.dy;
+    } else if (ball.y > ai.y + ai.height / 2) {
+      ai.y += ai.dy;
+    }
+  }
+
+  function update() {
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
+      ball.dy *= -1;
+    }
+
+    const playerOrAI = ball.x < canvas.width / 2 ? player : ai;
+    if (collision(ball, playerOrAI)) {
+      let angle = (ball.y - (playerOrAI.y + playerOrAI.height / 2)) / (playerOrAI.height / 2);
+      let direction = ball.x < canvas.width / 2 ? 1 : -1;
+      ball.dx = direction * ball.speed;
+      ball.dy = angle * ball.speed;
+      ball.speed += 0.1; 
+    }
+    resetBall();
+    updateAI();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawNet();
+    drawScore(canvas.width / 4, 50, player.score);
+    drawScore(3 * canvas.width / 4, 50, ai.score);
+    player.draw();
+    ai.draw();
+    ball.draw();
+  }
+
+  // Game loop
+  function gameLoop() {
+    update();
+    render();
+  }
+
+  canvas.addEventListener("mousemove", (e) => {
+    const canvasPosition = canvas.getBoundingClientRect();
+    player.y = e.clientY - canvasPosition.top - player.height / 2;
+  });
+
+  setInterval(gameLoop, 1000 / 60);
+</script>
+</body>
+</html>
+
